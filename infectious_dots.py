@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 import random
 
-N = 1000 # number of dots
+N = 2000 # number of dots
 tot_infected = 1 # infected in the beginning
-box_size = 250 # size of each edge of the box
+box_size = 400 # size of each edge of the box
+
+print(f"Dots per square unit = {N/box_size**2}")
 
 infection_chance = 0.2 # chance for an infected dot to infect a susceptible dot per frame
 infection_radius = 7 # radius within which an infected dot can infect others
@@ -13,20 +15,33 @@ infection_radius = 7 # radius within which an infected dot can infect others
 ratio_slow = 0.1 # ratio of dots to start off with slow movement
 ratio_immune = 0 # ratio of dots to start off immune
 
-set_slow_ratio = 0.9 # ratio of dots to set to slow movement after the threshold of infected dots is reached
-set_slow_threshold = 100 # threshold of number of infected where the number of slow dots is increased
-set_fast_threshold = 0 # threshold where dots will begin to move fast again if number of infected drops below
+set_slow_ratio = 1 # ratio of dots to set to slow movement after the threshold of infected dots is reached
+set_slow_threshold = 2000 # threshold of number of infected where the number of slow dots is increased
+set_fast_threshold = 5 # threshold where dots will begin to move fast again if number of infected drops below
 
 infection_length_min = 100 # minimum frames the infection lasts
 infection_length_max = 150 # maximum frames the infection lasts
 
-immunity_length_min = 500 # minimum number of frames immunity lasts
-immunity_length_max = 550 # maximum number of frames immunity lasts
+immunity_length_min = 5000 # minimum number of frames immunity lasts
+immunity_length_max = 5500 # maximum number of frames immunity lasts
+
+""" Work, for all dots, is in the center of the box.
+After going to work a dot will always go home after, then begin to drift randomly.
+"""
+stay_work_time = 30 # how long to stay "at work" before going home
+stay_home_time = 5000 # how long to stay "at home" before beginning to drift
+go_to_work_chance = 0.001 # chance each frame that a dot decides to go "to work"
+reduced_go_to_work_chance = 0.00001 # chance after reduction in how many goes to work
+reduced_go_to_work_threshold = 2000 # threshold of number of infected where the chance to go to work is reduced
+increase_go_to_work_threshold = 10 # threshold where dots will increase work chance again if number of infected drops below
+
+all_home = True # if True, all dots will start of at home
 
 max_frames = 5000
 
-filename = "slow_after_100_immunitydrop"
+filename = "home_go_center_no_restrictions"
 fps = 40
+save_anim = True
 
 class dot:
     def __init__(self):
@@ -34,6 +49,7 @@ class dot:
         self.y = box_size*np.random.random()
         self.vel_x = 0
         self.vel_y = 0
+        self.max_vel = 20
         self.infected_days = 0
         self.immune_days = 0
         self.infected_duration = int(np.mean([infection_length_max,
@@ -44,6 +60,43 @@ class dot:
 
         self.state = "susceptible"
         self.behaviour = "normal"
+        self.set_normal()
+
+        self.home_x = int(np.random.random()*box_size)
+        self.home_y = int(np.random.random()*box_size)
+        self.home_radius = 10
+        self.home_counter = 0
+
+        self.work_x = box_size/2
+        self.work_y = box_size/2
+        self.work_radius = 10
+        self.work_counter = 0
+        self.reach_home = False
+        self.reach_work = False
+
+        self.go_to_work_chance = go_to_work_chance
+
+
+    def go_home(self):
+        self.behaviour = "move_home"
+        self.reach_home = False
+
+
+    def go_work(self):
+        self.behaviour = "move_work"
+        self.reach_work = False
+
+
+    def set_normal(self):
+        if self.behaviour not in ["move_home", "move_work"]:
+            self.behaviour = "normal"
+        self.return_behaviour = "normal"
+
+
+    def set_slow(self):
+        if self.behaviour not in ["move_home", "move_work"]:
+            self.behaviour = "slow"
+        self.return_behaviour = "slow"
 
 
     @property
@@ -56,18 +109,97 @@ class dot:
             return "purple"
 
 
+    def normal_motion(self):
+        self.vel_x += (np.random.random() - 0.5)*0.1 - self.vel_x*abs(self.vel_x)*0.01
+        self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*abs(self.vel_y)*0.01
+
+
+    def slow_motion(self):
+        self.vel_x += (np.random.random() - 0.5)*0.1 - self.vel_x*0.8
+        self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*0.8
+
+
     def move(self, dots):
+        distance_home = np.sqrt((self.x - self.home_x)**2
+                              + (self.y - self.home_y)**2)
+
+        distance_work = np.sqrt((self.x - self.work_x)**2
+                              + (self.y - self.work_y)**2)
+
+        if np.random.random() < self.go_to_work_chance:
+            self.go_work()
+
         if self.behaviour == "normal":
-            self.vel_x += (np.random.random() - 0.5)*0.1 - self.vel_x*abs(self.vel_x)*0.01
-            self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*abs(self.vel_y)*0.01
-            new_x = self.x + self.vel_x
-            new_y = self.y + self.vel_y
+            self.normal_motion()
 
         if self.behaviour == "slow":
-            self.vel_x += (np.random.random() - 0.5)*0.1 - self.vel_x*0.8
-            self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*0.8
-            new_x = self.x + self.vel_x
-            new_y = self.y + self.vel_y
+            self.slow_motion()
+
+        if self.behaviour == "move_home":
+            self.home_counter += 1
+            if distance_home > self.home_radius:
+                if self.reach_home:
+                    self.vel_x *= -1
+                    self.vel_y *= -1
+                else:
+                    self.vel_x = (self.home_x - self.x)/max([abs(self.home_x - self.x)**0.2, 1])
+                    self.vel_y = (self.home_y - self.y)/max([abs(self.home_y - self.y)**0.2, 1])
+                self.reach_home = False
+            else:
+                if not self.reach_home:
+                    self.reach_home = True
+                    self.vel_x = (np.random.random() - 0.5)*0.1
+                    self.vel_y = (np.random.random() - 0.5)*0.1
+                if self.return_behaviour == "normal":
+                    self.normal_motion()
+                if self.return_behaviour == "slow":
+                    self.slow_motion()
+
+            if self.home_counter > stay_home_time:
+                self.behaviour = self.return_behaviour
+                self.home_counter = 0
+                self.vel_x = (np.random.random() - 0.5)*0.1
+                self.vel_y = (np.random.random() - 0.5)*0.1
+
+        if self.behaviour == "move_work":
+            self.work_counter += 1
+            if distance_work > self.work_radius:
+                if self.reach_work:
+                    self.vel_x *= -1
+                    self.vel_y *= -1
+                else:
+                    self.vel_x = (self.work_x - self.x)/max([abs(self.work_x - self.x)**0.2, 1])
+                    self.vel_y = (self.work_y - self.y)/max([abs(self.work_y - self.y)**0.2, 1])
+                self.reach_work = False
+            else:
+                if not self.reach_work:
+                    self.reach_work = True
+                    self.vel_x = (np.random.random() - 0.5)*0.1
+                    self.vel_y = (np.random.random() - 0.5)*0.1
+                if self.return_behaviour == "normal":
+                    self.normal_motion()
+                if self.return_behaviour == "slow":
+                    self.slow_motion()
+
+            if self.work_counter > stay_work_time:
+                self.behaviour = self.return_behaviour
+                self.work_counter = 0
+                self.vel_x = (np.random.random() - 0.5)*0.1
+                self.vel_y = (np.random.random() - 0.5)*0.1
+                self.go_home()
+
+        if self.vel_x > self.max_vel:
+            self.vel_x = self.max_vel
+        if self.vel_x < -self.max_vel:
+            self.vel_x = -self.max_vel
+
+        if self.vel_y > self.max_vel:
+            self.vel_Y = self.max_vel
+        if self.vel_y < -self.max_vel:
+            self.vel_y = -self.max_vel
+
+        new_x = self.x + self.vel_x
+        new_y = self.y + self.vel_y
 
         if new_x < 0 or new_x > box_size:
             self.vel_x *= -1
@@ -86,7 +218,6 @@ class dot:
                 self.immune_days = 0
                 self.immunity_duration = np.random.randint(immunity_length_min,
                                                            immunity_length_max + 1)
-
         if self.state == "removed":
             self.immune_days += 1
             if self.immune_days > self.immunity_duration:
@@ -132,11 +263,17 @@ for i in range(tot_infected):
     dots[i].state = "infected"
 random.shuffle(dots)
 for i in range(int(N*ratio_slow)):
-    dots[i].behaviour = "slow"
+    dots[i].set_slow()
 random.shuffle(dots)
 for i in range(int(N*ratio_immune)):
     dots[i].state = "removed"
 random.shuffle(dots)
+
+if all_home:
+    for dot in dots:
+        dot.go_home()
+        dot.x = dot.home_x
+        dot.y = dot.home_y
 
 x_positions = []
 y_positions = []
@@ -149,6 +286,7 @@ dots_x_positions = np.array([dot.x for dot in dots])
 dots_y_positions = np.array([dot.y for dot in dots])
 
 slow_triggered = False
+reduced_work_triggered = False
 
 for frame in range(max_frames):
     for dot in dots:
@@ -164,15 +302,25 @@ for frame in range(max_frames):
 
     if num_infected[frame] > set_slow_threshold and not slow_triggered:
         for i in range(int(N*set_slow_ratio)):
-            dots[i].behaviour = "slow"
+            dots[i].set_slow()
         slow_triggered = True
 
     if num_infected[frame] < set_fast_threshold and slow_triggered:
         for dot in dots:
-            dot.behaviour = "normal"
+            dot.set_normal()
         for i in range(int(N*ratio_slow)):
-            dots[i].behaviour = "slow"
+            dots[i].set_slow()
         slow_triggered = False
+
+    if num_infected[frame] > reduced_go_to_work_threshold and not reduced_work_triggered:
+        for dot in dots:
+            dot.go_to_work_chance = reduced_go_to_work_chance
+        reduced_work_triggered = True
+
+    if num_infected[frame] < increase_go_to_work_threshold and reduced_work_triggered:
+        for dot in dots:
+            dot.go_to_work_chance = go_to_work_chance
+        reduced_work_triggered = False
 
     dots_x_positions = np.array([dot.x for dot in dots])
     dots_y_positions = np.array([dot.y for dot in dots])
@@ -201,7 +349,7 @@ plt.legend()
 plt.xlabel("Simulation frame")
 plt.ylabel("# of dots")
 
-plt.savefig(filename + ".pdf", dpi = 300)
+plt.savefig("results/" + filename + ".pdf", dpi = 300)
 
 fig = plt.figure(figsize=(7,7))
 ax = plt.axes(xlim=(0, box_size), ylim=(0, box_size))
@@ -223,5 +371,5 @@ Writer = animation.writers['ffmpeg']
 writer = Writer(fps=fps, metadata=dict(artist='Me'), bitrate=3000)
 
 anim = animation.FuncAnimation(fig, animate, frames=max_frames, interval=20)
-anim.save(filename + ".mp4", writer=writer)
+if save_anim: anim.save("results/" + filename + ".mp4", writer=writer)
 plt.show()
