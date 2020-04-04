@@ -39,6 +39,8 @@ class dot:
 
         self.go_to_work_chance = go_to_work_chance
 
+        self.infected_others = 0
+
 
     def go_home(self):
         self.behaviour = "move_home"
@@ -64,6 +66,8 @@ class dot:
 
     @property
     def color(self):
+        if self.state == "immune":
+            return "green"
         if self.state == "susceptible":
             return "blue"
         if self.state == "infected":
@@ -214,6 +218,7 @@ class dot:
 
             for dot in infect_dots:
                 if dot.state == "susceptible":
+                    self.infected_others += 1
                     dot.state = "infected"
                     dot.infected_days = 0
                     dot.infected_duration = np.random.randint(infection_length_min,
@@ -229,7 +234,7 @@ for i in range(int(N*ratio_slow)):
     dots[i].set_slow()
 random.shuffle(dots)
 for i in range(int(N*ratio_immune)):
-    dots[i].state = "removed"
+    dots[i].state = "immune"
 random.shuffle(dots)
 
 if all_home:
@@ -244,6 +249,7 @@ colors = []
 
 num_susceptible = np.zeros(max_frames)
 num_infected = np.zeros(max_frames)
+r_over_time = np.zeros(max_frames)
 
 dots_x_positions = np.array([dot.x for dot in dots])
 dots_y_positions = np.array([dot.y for dot in dots])
@@ -252,6 +258,7 @@ slow_triggered = False
 reduced_work_triggered = False
 
 for frame in range(max_frames):
+    r_values = []
     for dot in dots:
         dot.infect_near(dots,
                         [dots_x_positions, dots_y_positions],
@@ -260,8 +267,12 @@ for frame in range(max_frames):
         dot.move(dots, [dots_x_positions, dots_y_positions])
         if dot.state == "susceptible":
             num_susceptible[frame] += 1
-        if dot.state == "infected":
+        elif dot.state == "infected":
             num_infected[frame] += 1
+            if dot.infected_others > 0:
+                r_values.append(dot.infected_others)
+        elif dot.state == "removed":
+            r_values.append(dot.infected_others)
 
     if num_infected[frame] > set_slow_threshold and not slow_triggered:
         for i in range(int(N*set_slow_ratio)):
@@ -292,26 +303,35 @@ for frame in range(max_frames):
     y_positions.append(dots_y_positions)
     colors.append([dot.color for dot in dots])
 
+    if sum(r_values) > 0:
+        r_over_time[frame] = np.average(r_values)
+
     if frame % 1 == 0:
-        print(f"Frame {frame}, num_infected = {num_infected[frame]}   ", end = "\r")
+        print(f"Frame {frame}, num_infected = {num_infected[frame]}, R = {r_over_time[frame]:2.4f}   ", end = "\r")
 
     if num_infected[frame] == 0:
-        print(f"Ending after {frame} frames with 0 infected")
+        print(f"Ending after {frame} frames with 0 infected                   ")
         max_frames = frame
         num_susceptible = num_susceptible[:frame]
         num_infected = num_infected[:frame]
+        r_over_time = r_over_time[:frame]
         num_removed = N - (num_infected + num_susceptible)
         break
     num_removed = N - (num_infected + num_susceptible)
 
-fig = plt.figure(figsize=(7,7))
-plt.plot(num_susceptible, label="susceptible")
-plt.plot(num_infected, label="infected")
-plt.plot(num_removed, label="removed")
+fig, ax1 = plt.subplots(figsize=(7,7))
+ax1.plot(num_susceptible, label="susceptible")
+ax1.plot(num_infected, label="infected")
+ax1.plot(num_removed, label="removed & immune")
+ax1.set_xlabel("Simulation frame")
+ax1.set_ylabel("# of dots", color = "blue")
 plt.legend()
-plt.xlabel("Simulation frame")
-plt.ylabel("# of dots")
 
+ax2 = ax1.twinx()
+ax2.plot(r_over_time, "--", color = "red", label="R value")
+ax2.set_ylabel("R value", color = "red")
+
+plt.legend()
 plt.savefig("results/" + filename + ".pdf", dpi = 300)
 
 fig = plt.figure(figsize=(7,7))
@@ -327,7 +347,7 @@ def animate(i):
     colors_i = colors[i]
     d.set_offsets(np.array([x_positions_i, y_positions_i]).T)
     d.set_color(colors_i)
-    plt.title(f"Frame {i}, number of infected = {num_infected[i]}")
+    plt.title(f"Frame {i}, number of infected = {num_infected[i]}, R value = {r_over_time[i]:2.4f}")
     return d,
 
 Writer = animation.writers['ffmpeg']
