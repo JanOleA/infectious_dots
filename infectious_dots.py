@@ -119,7 +119,7 @@ class dot:
         self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*0.8
 
 
-    def move(self, dots):
+    def move(self, dots, dots_positions):
         distance_home = np.sqrt((self.x - self.home_x)**2
                               + (self.y - self.home_y)**2)
 
@@ -294,7 +294,7 @@ for frame in range(max_frames):
                         [dots_x_positions, dots_y_positions],
                         chance = infection_chance,
                         radius = infection_radius)
-        dot.move(dots)
+        dot.move(dots, [dots_x_positions, dots_y_positions])
         if dot.state == "susceptible":
             num_susceptible[frame] += 1
         if dot.state == "infected":
