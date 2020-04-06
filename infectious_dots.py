@@ -6,6 +6,11 @@ from settings import *
 
 print(f"Dots per square unit = {N/box_size**2}")
 
+if plot_title == "" or plot_title == None:
+    plot_title = f"InfC = {infection_chance} | InfRad = {infection_radius} | SSl = {ratio_slow} | SIm = {ratio_immune} | SetSlR = {set_slow_ratio}\nSetSlT = {set_slow_threshold} | SetFaT = {set_fast_threshold} | "
+    plot_title += f"InfL = {infection_length_min} - {infection_length_max} | Im_L = {immunity_length_min} - {immunity_length_max}\nStWTim = {stay_work_time} | StHTim = {stay_home_time} | GW_C = {go_to_work_chance}\nRedGW_C = {reduced_go_to_work_chance} | RedGW_T = {reduced_go_to_work_threshold} | IncGW_T = {increase_go_to_work_threshold}"
+    plot_title += f" | AH = {all_home}"
+
 class dot:
     def __init__(self):
         self.x = box_size*np.random.random()
@@ -271,8 +276,6 @@ for frame in range(max_frames):
             num_infected[frame] += 1
             if dot.infected_others > 0:
                 r_values.append(dot.infected_others)
-        elif dot.state == "removed":
-            r_values.append(dot.infected_others)
 
     if num_infected[frame] > set_slow_threshold and not slow_triggered:
         for i in range(int(N*set_slow_ratio)):
@@ -320,18 +323,21 @@ for frame in range(max_frames):
     num_removed = N - (num_infected + num_susceptible)
 
 fig, ax1 = plt.subplots(figsize=(7,7))
-ax1.plot(num_susceptible, label="susceptible")
-ax1.plot(num_infected, label="infected")
-ax1.plot(num_removed, label="removed & immune")
+l1 = ax1.plot(num_susceptible, label="susceptible")
+l2 = ax1.plot(num_infected, label="infected")
+l3 = ax1.plot(num_removed, label="removed & immune")
 ax1.set_xlabel("Simulation frame")
 ax1.set_ylabel("# of dots", color = "blue")
-plt.legend()
+plt.title(plot_title)
 
 ax2 = ax1.twinx()
-ax2.plot(r_over_time, "--", color = "red", label="R value")
+l4 = ax2.plot(r_over_time, "--", color = "red", label="R value")
 ax2.set_ylabel("R value", color = "red")
 
-plt.legend()
+lns = l1 + l2 + l3 + l4
+labs = [l.get_label() for l in lns]
+ax1.legend(lns, labs, loc = 1)
+
 plt.savefig("results/" + filename + ".pdf", dpi = 300)
 
 fig = plt.figure(figsize=(7,7))
