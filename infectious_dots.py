@@ -6,11 +6,6 @@ from settings import *
 
 print(f"Dots per square unit = {N/box_size**2}")
 
-if plot_title == "" or plot_title == None:
-    plot_title = f"InfC = {infection_chance} | InfRad = {infection_radius} | SSl = {ratio_slow} | SIm = {ratio_immune} | SetSlR = {set_slow_ratio}\nSetSlT = {set_slow_threshold} | SetFaT = {set_fast_threshold} | "
-    plot_title += f"InfL = {infection_length_min} - {infection_length_max} | Im_L = {immunity_length_min} - {immunity_length_max}\nStWTim = {stay_work_time} | StHTim = {stay_home_time} | GW_C = {go_to_work_chance}\nRedGW_C = {reduced_go_to_work_chance} | RedGW_T = {reduced_go_to_work_threshold} | IncGW_T = {increase_go_to_work_threshold}"
-    plot_title += f" | AH = {all_home}"
-
 class dot:
     def __init__(self):
         self.x = box_size*np.random.random()
@@ -188,8 +183,7 @@ class dot:
             if self.infected_days > self.infected_duration:
                 self.state = "removed"
                 self.immune_days = 0
-                self.immunity_duration = np.random.randint(immunity_length_min,
-                                                           immunity_length_max + 1)
+                self.immunity_duration = np.random.randint(immunity_length_min, immunity_length_max + 1)
         if self.state == "removed":
             self.immune_days += 1
             if self.immune_days > self.immunity_duration:
@@ -226,8 +220,7 @@ class dot:
                     self.infected_others += 1
                     dot.state = "infected"
                     dot.infected_days = 0
-                    dot.infected_duration = np.random.randint(infection_length_min,
-                                                              infection_length_max + 1)
+                    dot.infected_duration = np.random.randint(infection_length_min, infection_length_max + 1)
 
 
 """ Initialize dots and set initial states """

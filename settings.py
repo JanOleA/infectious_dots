@@ -39,3 +39,8 @@ filename = "slow_and_work_restrictions_50_reup_5"
 plot_title = "Slows down and goes to the\ncenter less after 50 infected\nincrease at less than 5 infected"
 fps = 40
 save_anim = True
+
+if plot_title == "" or plot_title == None:
+    plot_title = f"InfC = {infection_chance} | InfRad = {infection_radius} | SSl = {ratio_slow} | SIm = {ratio_immune} | SetSlR = {set_slow_ratio}\nSetSlT = {set_slow_threshold} | SetFaT = {set_fast_threshold} | "
+    plot_title += f"InfL = {infection_length_min} - {infection_length_max} | Im_L = {immunity_length_min} - {immunity_length_max}\nStWTim = {stay_work_time} | StHTim = {stay_home_time} | GW_C = {go_to_work_chance}\nRedGW_C = {reduced_go_to_work_chance} | RedGW_T = {reduced_go_to_work_threshold} | IncGW_T = {increase_go_to_work_threshold}"
+    plot_title += f" | AH = {all_home}"
