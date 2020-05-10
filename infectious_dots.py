@@ -95,25 +95,11 @@ class dot:
         self.vel_y += (np.random.random() - 0.5)*0.1 - self.vel_y*0.8
 
 
-    def move(self, dots, dots_positions, healthcare_list, max_in_hospital):
-        if self.state == "dead": return
+    def move_home(self):
         distance_home = np.sqrt((self.x - self.home_x)**2
-                              + (self.y - self.home_y)**2)
+                               +(self.y - self.home_y)**2)
 
-        distance_work = np.sqrt((self.x - self.work_x)**2
-                              + (self.y - self.work_y)**2)
-
-        if np.random.random() < self.go_to_work_chance:
-            self.go_work()
-
-        if self.behaviour == "normal":
-            self.normal_motion()
-
-        if self.behaviour == "slow":
-            self.slow_motion()
-
-        if self.behaviour == "move_home":
-            self.home_counter += 1
+        self.home_counter += 1
             if distance_home > self.home_radius:
                 if self.reach_home:
                     self.vel_x *= -1
@@ -138,8 +124,12 @@ class dot:
                 self.vel_x = (np.random.random() - 0.5)*0.1
                 self.vel_y = (np.random.random() - 0.5)*0.1
 
-        if self.behaviour == "move_work":
-            self.work_counter += 1
+    
+    def move_work(self):
+        distance_work = np.sqrt((self.x - self.work_x)**2
+                               +(self.y - self.work_y)**2)
+
+        self.work_counter += 1
             if distance_work > self.work_radius:
                 if self.reach_work:
                     self.vel_x *= -1
@@ -165,6 +155,25 @@ class dot:
                 self.vel_y = (np.random.random() - 0.5)*0.1
                 self.go_home()
 
+
+    def move(self, dots, dots_positions, healthcare_list, max_in_hospital):
+        if self.state == "dead": return
+
+        if np.random.random() < self.go_to_work_chance:
+            self.go_work()
+
+        if self.behaviour == "normal":
+            self.normal_motion()
+
+        if self.behaviour == "slow":
+            self.slow_motion()
+
+        if self.behaviour == "move_home":
+            self.move_home()
+
+        if self.behaviour == "move_work":
+            self.move_work()
+            
         if self.vel_x > self.max_vel:
             self.vel_x = self.max_vel
         if self.vel_x < -self.max_vel:
@@ -178,11 +187,13 @@ class dot:
         new_x = self.x + self.vel_x
         new_y = self.y + self.vel_y
 
+        # bounce off the edges
         if new_x < 0 or new_x > box_size:
             self.vel_x *= -1
         else:
             self.x = new_x
 
+        # bounce off the edges
         if new_y < 0 or new_y > box_size:
             self.vel_y *= -1
         else:
@@ -241,6 +252,7 @@ class dot:
     def infect_near(self, dots, dots_positions, chance = 0.2, radius = 5):
         """ Infect other dots nearby with a given chance.
         NOTE that this method does not require the infecting dot to be infected
+        so this should be checked by whatever function calls this method
         """
         close_dots = self.near_dots(dots, dots_positions, radius)
         rolls = np.random.random(size = len(close_dots))
