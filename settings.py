@@ -12,8 +12,8 @@ ratio_slow = 0.3
 ratio_immune = 0
 
 set_slow_ratio = 0.95 # ratio of dots to set to slow movement after the threshold of infected dots is reached
-set_slow_threshold = 5000 # threshold of number of infected where the number of slow dots is increased
-set_fast_threshold = 0 # threshold where dots will begin to move fast again if number of infected drops below
+set_slow_threshold = 200 # threshold of number of infected where the number of slow dots is increased
+set_fast_threshold = 50 # threshold where dots will begin to move fast again if number of infected drops below
 
 infection_length_min = 200 # minimum frames the infection lasts
 infection_length_max = 250 # maximum frames the infection lasts
@@ -28,8 +28,8 @@ stay_work_time = 30 # how long to stay "at work" before going home
 stay_home_time = 30 # how long to stay "at home" before beginning to drift
 go_to_work_chance = 0.0002 # chance each frame that a dot decides to go "to work"
 reduced_go_to_work_chance = 0.00001 # chance after reduction in how many goes to work
-reduced_go_to_work_threshold = 5000 # threshold of number of infected where the chance to go to work is reduced
-increase_go_to_work_threshold = 0 # threshold where dots will increase work chance again if number of infected drops below
+reduced_go_to_work_threshold = 200 # threshold of number of infected where the chance to go to work is reduced
+increase_go_to_work_threshold = 50 # threshold where dots will increase work chance again if number of infected drops below
 
 all_home = True # if True, all dots will start of at home
 
@@ -39,8 +39,8 @@ death_chance_no_care = 0.01 # chance of death per day of infection for dots not 
 
 max_frames = 5000
 
-filename = "30p_slow_frequent_work_test"
-plot_title = f"30% slow, frequent work\nhealthcare capacity for 35%"
+filename = "30p_slow_frequent_work_test_restrictions_at_200_return_at_50"
+plot_title = f"Restrictions at 200 infections\ninitially 30% slow, frequent work\nhealthcare capacity for 35%\nRestrictions end at 50"
 fps = 40
 save_anim = True
 
