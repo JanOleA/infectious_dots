@@ -45,6 +45,7 @@ class dot:
         self.go_to_work_chance = go_to_work_chance
 
         self.infected_others = 0
+        self.dead_days = 0
 
 
     def go_home(self):
@@ -157,7 +158,9 @@ class dot:
 
 
     def move(self, dots, dots_positions, healthcare_list, max_in_hospital):
-        if self.state == "dead": return
+        if self.state == "dead":
+            self.dead_days += 1
+            return
 
         if np.random.random() < self.go_to_work_chance:
             self.go_work()
@@ -325,9 +328,11 @@ for frame in range(max_frames):
                 r_values.append(dot.infected_others)
         elif dot.state == "dead":
             num_dead[frame] += 1
-            r_values.append(dot.infected_others)
+            if dot.dead_days < infection_length_max:
+                r_values.append(dot.infected_others)
         elif dot.state == "removed":
-            r_values.append(dot.infected_others)
+            if dot.immune_days < infection_length_max:
+                r_values.append(dot.infected_others)
 
     if num_infected[frame] > set_slow_threshold and not slow_triggered:
         for i in range(int(N*set_slow_ratio)):
@@ -398,18 +403,20 @@ plt.savefig("results/" + filename + ".pdf", dpi = 300)
 
 fig, ax = plt.subplots(figsize=(7,7))
 ax.set_ylim(0, 1)
-death_rate_wrt_cases = num_dead/(num_infected + num_removed)
-death_rate_wrt_recov = num_dead/num_removed
+death_rate_wrt_cases = num_dead/(num_infected + num_removed + num_dead)
+death_rate_wrt_recov = num_dead/(num_removed + num_dead)
 
 ax.plot(death_rate_wrt_cases, label = "death rate per infected cases")
 ax.plot(death_rate_wrt_recov, label = "death rate per recovered cases")
 
+infection_length_avg = (infection_length_min + infection_length_max)/2
+
 ax.plot(np.full(death_rate_wrt_cases.shape,
-                infection_length_min*death_chance_wi_care),
+                infection_length_avg*death_chance_wi_care),
         label = "expected death rate with healthcare", color = "red")
 
 ax.plot(np.maximum(1, np.full(death_rate_wrt_cases.shape,
-                              infection_length_min*death_chance_no_care)),
+                              infection_length_avg*death_chance_no_care)),
         label = "expected death rate without healthcare", color = "purple")
 
 ax.set_xlabel("Simulation frame")
@@ -418,12 +425,14 @@ plt.legend()
 plt.title(plot_title)
 plt.savefig("results/" + filename + "_dr.pdf", dpi = 300)
 
-fig = plt.figure(figsize=(7,7))
-ax = plt.axes(xlim=(0, box_size), ylim=(0, box_size))
+fig, ax = plt.subplots(figsize=(7,7))
+ax.set_ylim(0, box_size)
+ax.set_xlim(0, box_size)
 d = ax.scatter([dot.x for dot in dots],
                [dot.y for dot in dots],
                s = 2000/box_size,
                c = [dot.color for dot in dots])
+
 
 def animate(i):
     x_positions_i = x_positions[i]
@@ -431,6 +440,7 @@ def animate(i):
     colors_i = colors[i]
     d.set_offsets(np.array([x_positions_i, y_positions_i]).T)
     d.set_color(colors_i)
+
     plt.title(f"Frame {i}, number of infected = {num_infected[i]}, R value = {r_over_time[i]:2.4f}")
     return d,
 
