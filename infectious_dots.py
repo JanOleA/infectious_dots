@@ -100,29 +100,29 @@ class dot:
                                +(self.y - self.home_y)**2)
 
         self.home_counter += 1
-            if distance_home > self.home_radius:
-                if self.reach_home:
-                    self.vel_x *= -1
-                    self.vel_y *= -1
-                else:
-                    self.vel_x = (self.home_x - self.x)/max([abs(self.home_x - self.x)**0.2, 1])
-                    self.vel_y = (self.home_y - self.y)/max([abs(self.home_y - self.y)**0.2, 1])
-                self.reach_home = False
+        if distance_home > self.home_radius:
+            if self.reach_home:
+                self.vel_x *= -1
+                self.vel_y *= -1
             else:
-                if not self.reach_home:
-                    self.reach_home = True
-                    self.vel_x = (np.random.random() - 0.5)*0.1
-                    self.vel_y = (np.random.random() - 0.5)*0.1
-                if self.return_behaviour == "normal":
-                    self.normal_motion()
-                if self.return_behaviour == "slow":
-                    self.slow_motion()
-
-            if self.home_counter > stay_home_time:
-                self.behaviour = self.return_behaviour
-                self.home_counter = 0
+                self.vel_x = (self.home_x - self.x)/max([abs(self.home_x - self.x)**0.2, 1])
+                self.vel_y = (self.home_y - self.y)/max([abs(self.home_y - self.y)**0.2, 1])
+            self.reach_home = False
+        else:
+            if not self.reach_home:
+                self.reach_home = True
                 self.vel_x = (np.random.random() - 0.5)*0.1
                 self.vel_y = (np.random.random() - 0.5)*0.1
+            if self.return_behaviour == "normal":
+                self.normal_motion()
+            if self.return_behaviour == "slow":
+                self.slow_motion()
+
+        if self.home_counter > stay_home_time:
+            self.behaviour = self.return_behaviour
+            self.home_counter = 0
+            self.vel_x = (np.random.random() - 0.5)*0.1
+            self.vel_y = (np.random.random() - 0.5)*0.1
 
     
     def move_work(self):
@@ -130,30 +130,30 @@ class dot:
                                +(self.y - self.work_y)**2)
 
         self.work_counter += 1
-            if distance_work > self.work_radius:
-                if self.reach_work:
-                    self.vel_x *= -1
-                    self.vel_y *= -1
-                else:
-                    self.vel_x = (self.work_x - self.x)/max([abs(self.work_x - self.x)**0.2, 1])
-                    self.vel_y = (self.work_y - self.y)/max([abs(self.work_y - self.y)**0.2, 1])
-                self.reach_work = False
+        if distance_work > self.work_radius:
+            if self.reach_work:
+                self.vel_x *= -1
+                self.vel_y *= -1
             else:
-                if not self.reach_work:
-                    self.reach_work = True
-                    self.vel_x = (np.random.random() - 0.5)*0.1
-                    self.vel_y = (np.random.random() - 0.5)*0.1
-                if self.return_behaviour == "normal":
-                    self.normal_motion()
-                if self.return_behaviour == "slow":
-                    self.slow_motion()
-
-            if self.work_counter > stay_work_time:
-                self.behaviour = self.return_behaviour
-                self.work_counter = 0
+                self.vel_x = (self.work_x - self.x)/max([abs(self.work_x - self.x)**0.2, 1])
+                self.vel_y = (self.work_y - self.y)/max([abs(self.work_y - self.y)**0.2, 1])
+            self.reach_work = False
+        else:
+            if not self.reach_work:
+                self.reach_work = True
                 self.vel_x = (np.random.random() - 0.5)*0.1
                 self.vel_y = (np.random.random() - 0.5)*0.1
-                self.go_home()
+            if self.return_behaviour == "normal":
+                self.normal_motion()
+            if self.return_behaviour == "slow":
+                self.slow_motion()
+
+        if self.work_counter > stay_work_time:
+            self.behaviour = self.return_behaviour
+            self.work_counter = 0
+            self.vel_x = (np.random.random() - 0.5)*0.1
+            self.vel_y = (np.random.random() - 0.5)*0.1
+            self.go_home()
 
 
     def move(self, dots, dots_positions, healthcare_list, max_in_hospital):
@@ -325,6 +325,9 @@ for frame in range(max_frames):
                 r_values.append(dot.infected_others)
         elif dot.state == "dead":
             num_dead[frame] += 1
+            r_values.append(dot.infected_others)
+        elif dot.state == "removed":
+            r_values.append(dot.infected_others)
 
     if num_infected[frame] > set_slow_threshold and not slow_triggered:
         for i in range(int(N*set_slow_ratio)):
